@@ -2,58 +2,60 @@ import React from "react";
 
 class Table extends React.Component {
   state = {
-    AllMovies: [
-      {
-        title: "Terminator",
-        genre: "action",
-        stock: "2",
-        rate: "4.6",
-      },
-      {
-        title: "Die hard",
-        genre: "action",
-        stock: "3",
-        rate: "3.9",
-      },
-      {
-        title: "Get Out",
-        genre: "thriller",
-        stock: "1",
-        rate: "2",
-      },
-      {
-        title: "Trip to italy",
-        genre: "comedy",
-        stock: "5",
-        rate: "2.2",
-      },
-      {
-        title: "Trip to italy",
-        genre: "comedy",
-        stock: "5",
-        rate: "2.2",
-      }, {
-        title: "Trip to italy",
-        genre: "comedy",
-        stock: "5",
-        rate: "2.2",
-      }, {
-        title: "Trip to italy",
-        genre: "comedy",
-        stock: "5",
-        rate: "2.2",
-      }
-    ],
+    AllMovies: [],
+    currPage: 1,
+    
   };
 
+  componentDidMount() {
+    fetch("/movies")
+      .then(function (res) {
+        return res.json();
+      })
+      .then((json) => {
+        this.setState({ AllMovies: json });
+
+        this.props.sendData(json.length)
+      });
+  }
+
   render() {
-      
-        let numberOfPages = Math.ceil(this.state.AllMovies.length/5);
-        let arr = []
-        for(let i =1 ; i<=numberOfPages; i++){
-            arr.push(i);
-        }
-      
+    
+    let moviesToDisplay = [];
+    
+    if(this.props.genre != "All Genre"){
+      moviesToDisplay = this.state.AllMovies.filter((el)=>{
+        return el.genre.name == this.props.genre;
+      });
+
+    }
+    else{
+      moviesToDisplay = this.state.AllMovies;
+    }
+
+    if(this.props.searchString){
+      let strToCompare = this.props.searchString.toLowerCase()
+
+     moviesToDisplay = moviesToDisplay.filter((el)=>{
+        return el.title.toLowerCase().includes(strToCompare);
+      });
+    }
+    
+
+
+    let numberOfPages = Math.ceil(moviesToDisplay.length / 5);
+    let arr = [];
+    for (let i = 1; i <= numberOfPages; i++) {
+      arr.push(i);
+    }
+
+    let starting = (this.state.currPage - 1) * 5;
+    let ending = this.state.currPage * 5 - 1;
+
+     moviesToDisplay = moviesToDisplay.slice(
+      starting,
+      Math.min(ending, moviesToDisplay.length - 1) + 1);
+
     return (
       <div>
         <table class="table">
@@ -68,48 +70,92 @@ class Table extends React.Component {
             </tr>
           </thead>
           <tbody>
-              {
-                  this.state.AllMovies.map((el)=>{
-                      return(<tr>
-                        <td>{el.title}</td>
-                        <td>{el.genre}</td>
-                        <td>{el.stock}</td>
-                        <td>{el.rate}</td>
+            {moviesToDisplay.map((el) => {
+              return (
+                <tr key={el._id}>
+                  <td>{el.title}</td>
+                  <td>{el.genre.name}</td>
+                  <td>{el.numberInStock}</td>
+                  <td>{el.dailyRentalRate}</td>
+
+                  <td
+                    onClick={() => {
+                      let AllMovies = this.state.AllMovies;
+
+                      let index = AllMovies.findIndex((e) => {
+                        return e._id == el._id;
+                      });
+
+                      AllMovies[index].liked
+                        ? (AllMovies[index].liked = false)
+                        : (AllMovies[index].liked = true);
+
+                      this.setState({ AllMovies: AllMovies });
+                    }}
+                  >
+                    {el.liked ? "liked!" : "like"}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="btn btn-danger"
+                      onClick={() => {
+                        let AllMovies = this.state.AllMovies;
+                        AllMovies = AllMovies.filter((eli) => {
+                          return eli._id != el._id;
+                        });
                         
-                        <td>Like</td>
-                        <td>
-                          <button type="button" class="btn btn-danger">
-                            Delete
-                          </button>
-                        </td>
-                      </tr>);
-                  })
-              }
-            
+                        this.props.sendData(AllMovies.length);
+                        this.setState({ AllMovies: AllMovies });
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 
         <nav aria-label="Page navigation example">
           <ul class="pagination">
-          <li class="page-item">
-                        <a class="page-link" href="#">
-                         Previous
-                        </a>
-                      </li>
-              {
-                  arr.map(function(el){
-                      return(
-                        <li class="page-item">
-                        <a class="page-link" href="#">
-                          {el}
-                        </a>
-                      </li>
-                      );
-                  })
-              }
+            <li
+              class="page-item"
+              onClick={(el) => {
+                this.setState({
+                  currPage: Math.max(1, this.state.currPage - 1),
+                });
+              }}
+            >
+              <a class="page-link" href="#">
+                Previous
+              </a>
+            </li>
 
-            
-            <li class="page-item">
+            {arr.map((el) => {
+              return (
+                <li
+                  class="page-item"
+                  onClick={() => {
+                    this.setState({ currPage: el });
+                  }}
+                >
+                  <a class="page-link" href="#">
+                    {el}
+                  </a>
+                </li>
+              );
+            })}
+
+            <li
+              class="page-item"
+              onClick={() => {
+                this.setState({
+                  currPage: Math.min(numberOfPages, this.state.currPage + 1),
+                });
+              }}
+            >
               <a class="page-link" href="#">
                 Next
               </a>
